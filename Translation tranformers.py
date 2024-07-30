@@ -88,3 +88,35 @@ transformer_model = build_transformer_model(en_vocab_size, fr_vocab_size, sequen
 
 # Now you can train the model
 # transformer_model.fit([en_x, fr_y[:, :-1]], fr_y[:, 1:], epochs=10, batch_size=64)  # Uncomment and adjust as needed
+
+
+hist=transformer_model.fit([en_x, fr_y[:, :-1]], fr_y[:, 1:], epochs=10, batch_size=64)  # Uncomment and adjust as needed
+
+
+def translate_text(text, model, en_tokenizer, fr_tokenizer, fr_index_lookup, sequence_len):
+    input_sequence = en_tokenizer.texts_to_sequences([text])
+    padded_input_sequence = pad_sequences(input_sequence, maxlen=sequence_len, padding='post')
+    decoded_text = '[start]'
+
+    for i in range(sequence_len):
+        target_sequence = fr_tokenizer.texts_to_sequences([decoded_text])
+        padded_target_sequence = pad_sequences(target_sequence, maxlen=sequence_len, padding='post')[:, :-1]
+        
+        prediction = model([padded_input_sequence, padded_target_sequence])
+
+        idx = np.argmax(prediction[0, i, :]) - 1
+        token = fr_index_lookup[idx]
+        decoded_text += ' ' + token
+
+        if token == '[end]':
+            break
+    
+    return decoded_text[8:-6] # Remove [start] and [end] tokens
+
+fr_vocab = fr_tokenizer.word_index
+fr_index_lookup = dict(zip(range(len(fr_vocab)), fr_vocab))
+texts = en[40000:40010].values
+
+for text in texts:
+    translated = translate_text(text, model, en_tokenizer, fr_tokenizer, fr_index_lookup, sequence_len)
+    print(f'{text} => {translated}')
